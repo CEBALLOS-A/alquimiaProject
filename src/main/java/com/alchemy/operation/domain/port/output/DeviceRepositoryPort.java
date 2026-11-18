@@ -10,11 +10,19 @@ public interface DeviceRepositoryPort {
 
     SurveillanceDevice save(SurveillanceDevice device);
 
+    SurveillanceDevice update(DeviceType deviceType, Double distance, List<String> messageFragment);
+
+    SurveillanceDevice replace(SurveillanceDevice device);
+
+    void delete(DeviceType deviceType);
+
     Optional<SurveillanceDevice> findByDeviceType(DeviceType deviceType);
 
     List<SurveillanceDevice> findAll();
 
     boolean existsByDeviceType(DeviceType deviceType);
 
-    void deleteByDeviceType(DeviceType deviceType);
+    default void deleteByDeviceType(DeviceType deviceType) {
+        delete(deviceType);
+    }
 }

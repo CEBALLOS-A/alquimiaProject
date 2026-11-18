@@ -9,6 +9,8 @@ public enum DeviceType {
     CCPD(100, -100),
     STAR_SATELLITE(500, 100);
 
+    public static final DeviceType SATELLITE = STAR_SATELLITE;
+
     private final int x;
 
     private final int y;

@@ -46,8 +46,9 @@ public class SurveillanceDevice {
         if (messageFragment.isEmpty()) {
             throw new IllegalArgumentException("messageFragment must not be empty");
         }
-        if (messageFragment.stream().anyMatch(fragment -> fragment == null || fragment.isBlank())) {
-            throw new IllegalArgumentException("messageFragment must not contain null or blank values");
+        if (messageFragment.stream().anyMatch(fragment -> fragment == null
+                || (!fragment.isEmpty() && fragment.isBlank()))) {
+            throw new IllegalArgumentException("messageFragment must not contain null or whitespace-only values");
         }
         this.messageFragment = new ArrayList<>(messageFragment);
     }
