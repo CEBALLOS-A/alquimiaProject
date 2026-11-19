@@ -1,0 +1,4 @@
+com\alchemy\operation\domain\service\OperationDomainServiceTest.class
+com\alchemy\operation\infrastructure\adapter\input\rest\GlobalExceptionHandlerTest.class
+com\alchemy\operation\infrastructure\adapter\output\memory\InMemoryOperationRepositoryTest.class
+com\alchemy\operation\infrastructure\adapter\output\memory\InMemoryDeviceRepositoryTest.class
