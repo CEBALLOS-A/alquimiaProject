@@ -1,34 +1,24 @@
 package com.alchemy.operation.infrastructure.configuration;
 
+import com.alchemy.operation.application.usecase.DeleteDeviceInformationUseCaseImpl;
 import com.alchemy.operation.application.usecase.DeviceInformationUseCase;
-import com.alchemy.operation.application.usecase.OperationUseCase;
+import com.alchemy.operation.application.usecase.GetStoredInformationUseCaseImpl;
+import com.alchemy.operation.application.usecase.RegisterDeviceInformationUseCaseImpl;
+import com.alchemy.operation.application.usecase.ReplaceDeviceInformationUseCaseImpl;
 import com.alchemy.operation.domain.port.input.DeleteDeviceInformationUseCase;
 import com.alchemy.operation.domain.port.input.GetStoredInformationUseCase;
-import com.alchemy.operation.domain.port.input.OperationInputPort;
 import com.alchemy.operation.domain.port.input.ProcessAllInformationUseCase;
 import com.alchemy.operation.domain.port.input.RegisterDeviceInformationUseCase;
 import com.alchemy.operation.domain.port.input.ReplaceDeviceInformationUseCase;
 import com.alchemy.operation.domain.port.input.UpdateDeviceInformationUseCase;
 import com.alchemy.operation.domain.port.output.DeviceRepositoryPort;
-import com.alchemy.operation.domain.port.output.OperationOutputPort;
 import com.alchemy.operation.domain.service.OperationDomainService;
 import com.alchemy.operation.infrastructure.adapter.output.memory.InMemoryDeviceRepository;
-import com.alchemy.operation.infrastructure.adapter.output.memory.InMemoryOperationRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class BeanConfiguration {
-
-    @Bean
-    public OperationOutputPort operationOutputPort() {
-        return new InMemoryOperationRepository();
-    }
-
-    @Bean
-    public OperationInputPort operationInputPort(OperationOutputPort outputPort) {
-        return new OperationUseCase(outputPort);
-    }
 
     @Bean
     public DeviceRepositoryPort deviceRepositoryPort() {
@@ -42,22 +32,22 @@ public class BeanConfiguration {
 
     @Bean
     public RegisterDeviceInformationUseCase registerDeviceInformationUseCase(OperationDomainService domainService) {
-        return domainService::register;
+        return new RegisterDeviceInformationUseCaseImpl(domainService);
     }
 
     @Bean
     public ReplaceDeviceInformationUseCase replaceDeviceInformationUseCase(OperationDomainService domainService) {
-        return domainService::replace;
+        return new ReplaceDeviceInformationUseCaseImpl(domainService);
     }
 
     @Bean
     public DeleteDeviceInformationUseCase deleteDeviceInformationUseCase(OperationDomainService domainService) {
-        return domainService::delete;
+        return new DeleteDeviceInformationUseCaseImpl(domainService);
     }
 
     @Bean
     public GetStoredInformationUseCase getStoredInformationUseCase(OperationDomainService domainService) {
-        return domainService::findAll;
+        return new GetStoredInformationUseCaseImpl(domainService);
     }
 
     @Bean
