@@ -51,6 +51,7 @@ Base path: `/api/operations`
 | --- | --- | --- |
 | `POST` | `/process` | Calculate location and message from the supplied devices. |
 | `GET` | `/process` | Calculate location and message from stored devices. |
+| `GET` | `/devices` | Return all currently stored devices. |
 | `POST` | `/devices` | Register a device. |
 | `PUT` | `/devices` | Replace a stored device. |
 | `PATCH` | `/devices/{deviceType}` | Partially update distance and/or fragments. |

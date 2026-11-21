@@ -1,7 +1,7 @@
 package com.alchemy.operation.application.dto;
 
 import com.alchemy.operation.domain.model.DeviceType;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -25,5 +25,5 @@ public class UpdateDeviceRequest {
     private Double distance;
 
     @Size(min = 1)
-    private List<@NotBlank String> messageFragment;
+    private List<@NotNull String> messageFragment;
 }

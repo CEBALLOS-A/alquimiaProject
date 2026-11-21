@@ -11,6 +11,7 @@ import com.alchemy.operation.domain.model.DeviceType;
 import com.alchemy.operation.domain.model.LaboratoryLocation;
 import com.alchemy.operation.domain.model.SurveillanceDevice;
 import com.alchemy.operation.domain.port.input.DeleteDeviceInformationUseCase;
+import com.alchemy.operation.domain.port.input.GetStoredInformationUseCase;
 import com.alchemy.operation.domain.port.input.ProcessAllInformationUseCase;
 import com.alchemy.operation.domain.port.input.RegisterDeviceInformationUseCase;
 import com.alchemy.operation.domain.port.input.ReplaceDeviceInformationUseCase;
@@ -37,17 +38,20 @@ public class OperationController {
     private final UpdateDeviceInformationUseCase updateDeviceInformationUseCase;
     private final DeleteDeviceInformationUseCase deleteDeviceInformationUseCase;
     private final ProcessAllInformationUseCase processAllInformationUseCase;
+    private final GetStoredInformationUseCase getStoredInformationUseCase;
 
     public OperationController(RegisterDeviceInformationUseCase registerDeviceInformationUseCase,
                                ReplaceDeviceInformationUseCase replaceDeviceInformationUseCase,
                                UpdateDeviceInformationUseCase updateDeviceInformationUseCase,
                                DeleteDeviceInformationUseCase deleteDeviceInformationUseCase,
-                               ProcessAllInformationUseCase processAllInformationUseCase) {
+                               ProcessAllInformationUseCase processAllInformationUseCase,
+                               GetStoredInformationUseCase getStoredInformationUseCase) {
         this.registerDeviceInformationUseCase = registerDeviceInformationUseCase;
         this.replaceDeviceInformationUseCase = replaceDeviceInformationUseCase;
         this.updateDeviceInformationUseCase = updateDeviceInformationUseCase;
         this.deleteDeviceInformationUseCase = deleteDeviceInformationUseCase;
         this.processAllInformationUseCase = processAllInformationUseCase;
+        this.getStoredInformationUseCase = getStoredInformationUseCase;
     }
 
     @PostMapping("/process")
@@ -59,6 +63,13 @@ public class OperationController {
     @GetMapping("/process")
     public ProcessResponse processAccumulatedInformation() {
         return toResponse(processAllInformationUseCase.execute(), processAllInformationUseCase.message());
+    }
+
+    @GetMapping("/devices")
+    public List<DeviceResponse> getStoredDevices() {
+        return getStoredInformationUseCase.execute().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @PostMapping("/devices")

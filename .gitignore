@@ -1,0 +1,19 @@
+# Build output
+target/
+bin/
+*.class
+
+# IDE/editor files
+.vscode/
+.idea/
+*.iml
+
+# Generated reports and temporary files
+estructura.txt
+*.log
+*.tmp
+*.bak
+*~
+
+# Local duplicate project copy
+/alquimiaProject/

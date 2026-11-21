@@ -1,7 +1,6 @@
 package com.alchemy.operation.application.dto;
 
 import com.alchemy.operation.domain.model.DeviceType;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -28,5 +27,5 @@ public class ReplaceDeviceRequest {
     private Double distance;
 
     @NotEmpty
-    private List<@NotBlank String> messageFragment;
+    private List<@NotNull String> messageFragment;
 }

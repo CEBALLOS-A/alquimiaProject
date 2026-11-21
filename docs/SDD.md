@@ -131,13 +131,14 @@ The core calculation path uses the three reference devices declared in `DeviceTy
 
 ## 5. Requirements Traceability
 
-The assignment specification was provided externally and is not stored in the repository, and no source file contains literal `F1`-`F6` identifiers. The table below maps `F1`-`F6` to the six functional endpoints implemented in `OperationController`; descriptions are implementation-derived and are not quoted from the external specification.
+The assignment specification was provided externally and is not stored in the repository, and no source file contains literal `F1`-`F6` identifiers. The table below maps `F1`-`F6` to their corresponding controller flows; the replace operation is retained as an additional endpoint. Descriptions are implementation-derived and are not quoted from the external specification.
 
 | ID | Requirement Description | Implementation Location | Status |
 |---|---|---|---|
 | F1 | Register device information | `com.alchemy.operation.infrastructure.adapter.input.rest.OperationController.registerDevice` → `com.alchemy.operation.application.usecase.RegisterDeviceInformationUseCaseImpl.execute` → `com.alchemy.operation.domain.service.OperationDomainService.register` → `com.alchemy.operation.infrastructure.adapter.output.memory.InMemoryDeviceRepository.save` | PASS |
 | F2 | Process accumulated information | `OperationController.processAccumulatedInformation` → `DeviceInformationUseCase.execute()` and `DeviceInformationUseCase.message()` → `OperationDomainService.processAll()` and `OperationDomainService.message()` → `InMemoryDeviceRepository.findAll()` | PASS |
-| F3 | Replace information | `OperationController.replaceDevice` → `ReplaceDeviceInformationUseCaseImpl.execute` → `OperationDomainService.replace` → `InMemoryDeviceRepository.replace` | PASS |
+| F3 | Consult stored device information | `OperationController.getStoredDevices` → `GetStoredInformationUseCase.execute` → `OperationDomainService.findAll` → `InMemoryDeviceRepository.findAll` | PASS |
+| — | Replace information | `OperationController.replaceDevice` → `ReplaceDeviceInformationUseCaseImpl.execute` → `OperationDomainService.replace` → `InMemoryDeviceRepository.replace` | PASS |
 | F4 | Partial update | `OperationController.updateDevice` → `DeviceInformationUseCase.execute(DeviceType, Double, List<String>)` → `OperationDomainService.update` → `InMemoryDeviceRepository.update` | PASS |
 | F5 | Delete information | `OperationController.deleteDevice` → `DeleteDeviceInformationUseCaseImpl.execute` → `OperationDomainService.delete` → `InMemoryDeviceRepository.delete` | PASS |
 | F6 | Process supplied information | `OperationController.processCompleteInformation` → `DeviceInformationUseCase.execute(List<SurveillanceDevice>)` and `DeviceInformationUseCase.message(List<SurveillanceDevice>)` → `OperationDomainService.process` and `OperationDomainService.message` | PASS |
@@ -169,7 +170,7 @@ Compilation dependencies are directed toward the domain core:
 - The domain service depends on output port abstractions, not on Spring Web or repository implementations.
 - Domain model and service classes have no compile-time dependency on the REST controller or in-memory repository classes.
 
-`GetStoredInformationUseCase` is defined and wired, but `OperationController` does not inject or invoke it.
+`GetStoredInformationUseCase` is defined, wired, and invoked by `OperationController.getStoredDevices` to expose stored device information.
 
 ### Domain-Driven Design
 
@@ -240,7 +241,7 @@ The following decisions reflect the structure that is actually present in the co
 | Centralize cross-device business rules in `OperationDomainService` | `process`, `processAll`, `calculateLocation`, `message`, `buildMessage`, and `trilaterate` are implemented in `OperationDomainService`. | Trilateration and message reconstruction require coordinated access to several `SurveillanceDevice` instances, which does not belong to a single device object. |
 | Keep persistence behind a domain-owned output port | `DeviceRepositoryPort` defines `save`, `findAll`, `existsByDeviceType`, `update`, `replace`, and `delete`; `BeanConfiguration` supplies `InMemoryDeviceRepository`. | Allows the domain service to remain independent of storage technology while supporting deterministic local execution without a database. |
 | Represent HTTP contracts with dedicated DTOs | `RegisterDeviceRequest`, `ReplaceDeviceRequest`, `UpdateDeviceRequest`, `DeviceResponse`, `ProcessResponse`, `LocationResponse`, and `MessageResponse` are mapped in `OperationController`. | Separates external API validation and representation from domain invariants and prevents persistence or domain classes from being exposed directly. |
-| Translate exceptions at the inbound boundary | `GlobalExceptionHandler` maps `DomainException`, `LocationCalculationException`, `IllegalArgumentException`, validation errors, and unexpected exceptions to `ErrorResponse`. | Produces consistent HTTP status codes and response structure without coupling domain code to Spring Web. |
+| Translate exceptions at the inbound boundary | `GlobalExceptionHandler` maps `DomainException`, `LocationCalculationException`, `IllegalArgumentException`, validation errors, type-mismatch errors, unreadable request bodies, and unexpected exceptions to `ErrorResponse`. | Produces consistent HTTP status codes and response structure without coupling domain code to Spring Web. |
 | Protect in-memory state with defensive copies | `InMemoryDeviceRepository.copy` is used by `save`, `findAll`, `replace`, `update`, and `findByDeviceType`. | Prevents callers from mutating stored `SurveillanceDevice` instances through returned object references or supplied fragment lists. |
 | Treat the operation aggregate as a structural domain artifact | `Operation` implements `AggregateRoot`; `OperationOutputPort` and `InMemoryOperationRepository` exist, but `OperationController` does not use them and `BeanConfiguration` does not wire an operation repository bean. | Preserves the DDD aggregate marker for future use without introducing an untested runtime flow that is not part of the current API. |
 
@@ -835,6 +836,7 @@ All endpoints are defined in `com.alchemy.operation.infrastructure.adapter.input
 |---|---|---|---|---|---|
 | `POST` | `/api/operations/process` | Calculates location and reconstructs a message from supplied devices. | `List<RegisterDeviceRequest>` | `ProcessResponse` | `200 OK`; `400 BAD_REQUEST` for domain errors; `422 UNPROCESSABLE_ENTITY` for validation/location errors; `500 INTERNAL_SERVER_ERROR` for unexpected exceptions |
 | `GET` | `/api/operations/process` | Calculates location and reconstructs a message from stored devices. | None | `ProcessResponse` | `200 OK`; `400 BAD_REQUEST` for domain errors; `422 UNPROCESSABLE_ENTITY` for location errors; `500 INTERNAL_SERVER_ERROR` for unexpected exceptions |
+| `GET` | `/api/operations/devices` | Returns all currently stored devices. | None | `List<DeviceResponse>` | `200 OK`; `500 INTERNAL_SERVER_ERROR` for unexpected exceptions |
 | `POST` | `/api/operations/devices` | Registers device information. | `RegisterDeviceRequest` | `DeviceResponse` | `200 OK`; `400 BAD_REQUEST` for domain/illegal-argument errors; `422 UNPROCESSABLE_ENTITY` for validation errors; `500 INTERNAL_SERVER_ERROR` for unexpected exceptions |
 | `PUT` | `/api/operations/devices` | Replaces stored device information. | `ReplaceDeviceRequest` | `DeviceResponse` | `200 OK`; `400 BAD_REQUEST` for domain/illegal-argument errors; `422 UNPROCESSABLE_ENTITY` for validation errors; `500 INTERNAL_SERVER_ERROR` for unexpected exceptions |
 | `PATCH` | `/api/operations/devices/{deviceType}` | Partially updates distance and/or message fragments for a device. | `UpdateDeviceRequest` | `DeviceResponse` | `200 OK`; `400 BAD_REQUEST` for domain/illegal-argument errors; `422 UNPROCESSABLE_ENTITY` for validation errors; `500 INTERNAL_SERVER_ERROR` for unexpected exceptions |
@@ -844,9 +846,9 @@ All endpoints are defined in `com.alchemy.operation.infrastructure.adapter.input
 
 | DTO | Fields / Validation |
 |---|---|
-| `RegisterDeviceRequest` | `DeviceType deviceType` with `@NotNull`; `Double distance` with `@NotNull`, `@PositiveOrZero`; `List<@NotBlank String> messageFragment` with `@NotEmpty` |
-| `ReplaceDeviceRequest` | `DeviceType deviceType` with `@NotNull`; `Double distance` with `@NotNull`, `@PositiveOrZero`; `List<@NotBlank String> messageFragment` with `@NotEmpty` |
-| `UpdateDeviceRequest` | `DeviceType deviceType`; `Double distance` with `@PositiveOrZero`; `List<@NotBlank String> messageFragment` with `@Size(min = 1)` |
+| `RegisterDeviceRequest` | `DeviceType deviceType` with `@NotNull`; `Double distance` with `@NotNull`, `@PositiveOrZero`; `List<@NotNull String> messageFragment` with `@NotEmpty`; empty strings are allowed as missing words |
+| `ReplaceDeviceRequest` | `DeviceType deviceType` with `@NotNull`; `Double distance` with `@NotNull`, `@PositiveOrZero`; `List<@NotNull String> messageFragment` with `@NotEmpty`; empty strings are allowed as missing words |
+| `UpdateDeviceRequest` | `DeviceType deviceType`; `Double distance` with `@PositiveOrZero`; `List<@NotNull String> messageFragment` with `@Size(min = 1)`; empty strings are allowed as missing words |
 | `DeviceResponse` | `DeviceType deviceType`, `Double distance`, `List<String> messageFragment` |
 | `LocationResponse` | `Double x`, `Double y` |
 | `MessageResponse` | `String message` |
@@ -923,6 +925,8 @@ The selected persistence implementation is explicitly named `InMemoryDeviceRepos
 | `LocationCalculationException` | `422 UNPROCESSABLE_ENTITY` | Exception message |
 | `IllegalArgumentException` | `400 BAD_REQUEST` | Exception message |
 | `MethodArgumentNotValidException` | `422 UNPROCESSABLE_ENTITY` | Sorted field errors, e.g. `deviceType: must not be null, distance: must be positive`; fallback `Validation failed` |
+| `MethodArgumentTypeMismatchException` | `400 BAD_REQUEST` | `Invalid device type` |
+| `HttpMessageNotReadableException` | `400 BAD_REQUEST` | `Invalid request value` |
 | `Exception` | `500 INTERNAL_SERVER_ERROR` | `An unexpected error occurred` |
 
 ### Error response structure
@@ -959,7 +963,7 @@ No formal non-functional requirements document is present in the repository. The
 | NFR-4 | Domain invariants are enforced in model classes. | `SurveillanceDevice`, `Position`, and `LaboratoryLocation` validate constructor/setter inputs. | Implemented |
 | NFR-5 | Errors are reported in a consistent structured form. | `GlobalExceptionHandler` returns `ErrorResponse` with timestamp, status, error, message, and path. | Implemented |
 | NFR-6 | In-memory storage uses a concurrency-capable map. | `ConcurrentHashMap<DeviceType, SurveillanceDevice>` in `InMemoryDeviceRepository`. | Implemented |
-| NFR-7 | Business rules are automatically verified. | Four JUnit test classes and 44 passing tests reported by `mvn test`. | Implemented |
+| NFR-7 | Business rules are automatically verified. | Six JUnit test classes and 61 passing tests reported by `mvn test`. | Implemented |
 | NFR-8 | Application code is decoupled from concrete persistence through a port. | `OperationDomainService` depends on `DeviceRepositoryPort`; `BeanConfiguration` supplies `InMemoryDeviceRepository`. | Implemented |
 | NFR-9 | External database persistence is not configured. | `pom.xml` contains no database starter; `application.properties` contains only `spring.application.name`. | Observed absence |
 | NFR-10 | Logging and observability configuration is not specified in the repository. | `application.properties` contains no logging configuration; no logging facade usage is present in the reviewed source classes. | Observed absence |
@@ -976,8 +980,8 @@ The observed characteristics support deterministic local execution, automated ve
 
 | Metric | Value |
 |---|---:|
-| Test classes | 4 |
-| Tests | 44 |
+| Test classes | 6 |
+| Tests | 61 |
 | Failures | 0 |
 | Errors | 0 |
 | Skipped | 0 |
@@ -985,6 +989,23 @@ The observed characteristics support deterministic local execution, automated ve
 | Command | `mvn test` |
 
 ### Test classes
+
+#### `RequestValidationTest`
+
+- **Tests:** 11
+- **Covered scenarios:**
+  - Empty message fragments are accepted by all three request DTOs.
+  - Null message fragments are rejected by all three request DTOs.
+  - Empty and null message-fragment collections are rejected where applicable.
+
+#### `OperationControllerTest`
+
+- **Tests:** 4
+- **Covered scenarios:**
+  - `GET /api/operations/devices` returns all stored devices.
+  - `GET /api/operations/devices` returns an empty list when no devices are stored.
+  - Invalid device type in a path variable maps to `400`.
+  - Invalid request body value maps to `400`.
 
 #### `OperationDomainServiceTest`
 
@@ -1013,13 +1034,15 @@ The observed characteristics support deterministic local execution, automated ve
 
 #### `GlobalExceptionHandlerTest`
 
-- **Tests:** 6
+- **Tests:** 8
 - **Covered scenarios:**
   - `DomainException` → `400`.
   - `OperationNotFoundException` → `404`.
   - `LocationCalculationException` → `422`.
   - `IllegalArgumentException` → `400`.
   - `MethodArgumentNotValidException` → `422` with field errors.
+  - `MethodArgumentTypeMismatchException` → `400` for invalid device types.
+  - `HttpMessageNotReadableException` → `400` for invalid request values.
   - Unexpected exception → `500` with generic message.
 
 #### `InMemoryDeviceRepositoryTest`
@@ -1054,6 +1077,7 @@ The observed characteristics support deterministic local execution, automated ve
 | Replace | Repository replace tests; domain service `replace` |
 | Partial update | Repository partial-update tests; domain-service update validation |
 | Delete | Repository delete tests |
+| Stored device query | `OperationControllerTest` endpoint and empty-result tests |
 | Accumulated processing | `processAll` integration test and repository-backed message test |
 | Supplied processing | Domain-service `process(List<SurveillanceDevice>)` and `message(List<...>)` tests |
 | Trilateration | Multiple trilateration tests |
@@ -1079,7 +1103,8 @@ The observed characteristics support deterministic local execution, automated ve
 | Algorithm | Message reconstruction | PASS | `OperationDomainService.buildMessage` |
 | F1 | Register device information | PASS | `POST /api/operations/devices` |
 | F2 | Process accumulated information | PASS | `GET /api/operations/process` |
-| F3 | Replace information | PASS | `PUT /api/operations/devices` |
+| F3 | Consult stored device information | PASS | `GET /api/operations/devices` |
+| — | Replace information | PASS | `PUT /api/operations/devices` |
 | F4 | Partial update | PASS | `PATCH /api/operations/devices/{deviceType}` |
 | F5 | Delete information | PASS | `DELETE /api/operations/devices/{deviceType}` |
 | F6 | Process supplied information | PASS | `POST /api/operations/process` |
@@ -1104,4 +1129,4 @@ The port/adapter structure allows the in-memory repository implementation to be 
 
 ### Requirement compliance
 
-Based on the implementation present in the repository, the mapped functional requirements F1-F6, in-memory storage, trilateration, message reconstruction, DDD structure, and hexagonal architecture are implemented and covered by the current test suite. The test suite executes with `BUILD SUCCESS` and 44 passing tests.
+Based on the implementation present in the repository, the mapped functional requirements F1-F6, in-memory storage, trilateration, message reconstruction, DDD structure, and hexagonal architecture are implemented and covered by the current test suite. The test suite executes with `BUILD SUCCESS` and 61 passing tests.
