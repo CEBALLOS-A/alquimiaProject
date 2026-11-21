@@ -59,9 +59,23 @@ Base path: `/api/operations`
 
 ## Build and test
 
+Build:
+
 ```bash
-mvn test
-mvn spring-boot:run
+./mvnw test
+```
+
+Run:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Windows:
+
+```bat
+mvnw.cmd test
+mvnw.cmd spring-boot:run
 ```
 
 ## Documentation
